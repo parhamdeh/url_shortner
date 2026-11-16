@@ -1,0 +1,80 @@
+# -------------------------------------------------------------------------- #
+#                               COMMON SETTINGS                              #
+# -------------------------------------------------------------------------- #
+
+x-common: &common
+  restart: always
+  env_file:
+    - .env
+  networks:
+    - url-shortener
+
+# -------------------------------------------------------------------------- #
+#                                   IMAGES                                   #
+# -------------------------------------------------------------------------- #
+
+x-postgres: &postgres
+  image: postgres:15
+
+# -------------------------------------------------------------------------- #
+#                                  SERVICES                                  #
+# -------------------------------------------------------------------------- #
+
+services:
+
+  # ----------------------------- Redis Service ----------------------------- #
+
+  redis:
+    image: redis:8-alpine
+    container_name: url-shortner
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - url-shortener
+
+  # ----------------------------- RabbitMQ Service --------------------------- #
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: url-shortener-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - url-shortener
+
+  # ----------------------------- Postgres Service --------------------------- #
+
+  url_shortener_postgres:
+    <<: [*common, *postgres]
+    container_name: url-shortener-postgres
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - ./volumes/postgres_data:/var/lib/postgresql/data
+
+# -------------------------------------------------------------------------- #
+#                                  NETWORKS                                  #
+# -------------------------------------------------------------------------- #
+
+networks:
+  url-shortener:
+    driver: bridge
+
+# -------------------------------------------------------------------------- #
+#                                   VOLUMES                                  #
+# -------------------------------------------------------------------------- #
+
+volumes:
+  redis_data:
+  rabbitmq_data:
