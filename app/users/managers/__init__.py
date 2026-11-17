@@ -1,9 +1,7 @@
-from .user import User
+from .user import UserManager
 
 
 
 __all__ = [
-    "User",
-    "Wallet",
-    "WalletTransaction",
+    "UserManager",
 ]

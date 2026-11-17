@@ -1,64 +1,57 @@
-
 from __future__ import annotations
 
-from django.conf import settings
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.contrib.auth.models import AbstractBaseUser
+from django.core.validators import FileExtensionValidator
 from django.db import models
-from django.db.models import Q
-from django.db.models.functions import Lower
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from ..managers import UserManager
+from app.users.managers import UserManager
+from app.utils.models import BaseModel
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(AbstractBaseUser, BaseModel):
     """
-    Custom user model for the application.
+    Custom user model for the URL Shortener application.
 
     Authentication:
-        Users authenticate using their unique phone number.
+        Users authenticate using their unique email address.
 
-    Personal information:
-        Username and last name are required.
-        Email, profile photo, and birth date are optional.
-
-    Permissions:
-        Django's PermissionsMixin provides group membership,
-        user permissions, and superuser permission support.
-
-    Points:
-        Integer score constrained to the inclusive range [0, 5].
+    Profile:
+        Includes username, last name, profile photo, and birth date.
 
     Security:
-        Password hashing and password verification are handled by
-        Django's AbstractBaseUser implementation.
-    """
+        Passwords are hashed using Django's password hashing system.
+        """
 
     username = models.CharField(
         max_length=150,
-        verbose_name=_("Name"),
-        help_text=_("Required display name. It does not need to be unique."),
+        unique=True,
+        verbose_name=_("Username"),
+        help_text=_("Unique username for the user."),
     )
 
     last_name = models.CharField(
         max_length=150,
         verbose_name=_("Last name"),
-        help_text=_("Required family name of the user."),
+        help_text=_("User's family name."),
     )
 
     email = models.EmailField(
-        blank=True,
-        default="",
+        unique=True,
+        max_length=254,
         verbose_name=_("Email address"),
-        help_text=_("Optional email address. Non-empty email addresses must be unique."),
+        help_text=_("Unique email address used for authentication."),
     )
 
     profile_photo = models.ImageField(
         upload_to="users/profile_photos/",
         blank=True,
-        default="",
+        null=True,
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["jpg", "jpeg", "png", "webp"],
+            ),
+        ],
         verbose_name=_("Profile photo"),
         help_text=_("Optional profile picture."),
     )
@@ -66,109 +59,32 @@ class User(AbstractBaseUser, PermissionsMixin):
     birth_date = models.DateField(
         blank=True,
         null=True,
-        verbose_name=_("Date of birth"),
+        verbose_name=_("Birth date"),
         help_text=_("Optional date of birth."),
-    )
-
-    is_email_verified = models.BooleanField(
-        default=False,
-        verbose_name=_("Email verified"),
-        help_text=_("Whether the email address has been verified via OTP or Google."),
-    )
-
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name=_("Active"),
-        help_text=_("Whether this account is allowed to authenticate."),
-    )
-
-    is_staff = models.BooleanField(
-        default=False,
-        verbose_name=_("Staff status"),
-        help_text=_("Whether this user can access the Django admin site."),
-    )
-
-    date_joined = models.DateTimeField(
-        default=timezone.now,
-        editable=False,
-        verbose_name=_("Date joined"),
-        help_text=_("Date and time when the account was created."),
-    )
-
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_("Created at"),
-        help_text=_("Timestamp when this record was created."),
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name=_("Updated at"),
-        help_text=_("Timestamp of the last model save."),
     )
 
     objects = UserManager()
 
-    USERNAME_FIELD = "phone"
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username", "last_name"]
 
     class Meta:
-        """Database constraints and default presentation for users."""
-
-        ordering = ("-created_at",)
+        """Database configuration for the User model."""
 
         verbose_name = _("User")
         verbose_name_plural = _("Users")
-
-        constraints = [
-            models.UniqueConstraint(
-                Lower("email"),
-                condition=~Q(email=""),
-                name="users_user_email_ci_uniq",
-            ),
-            models.UniqueConstraint(
-                "google_sub",
-                condition=~Q(google_sub=""),
-                name="users_user_google_sub_uniq",
-            ),
-            models.CheckConstraint(
-                condition=Q(points__gte=0) & Q(points__lte=5),
-                name="users_user_points_0_5",
-            ),
-        ]
-
-        indexes = [
-            models.Index(
-                fields=["-created_at"],
-                name="users_user_created_idx",
-            ),
-            models.Index(
-                fields=["is_active", "is_staff"],
-                name="users_user_status_idx",
-            ),
-            models.Index(
-                fields=["is_vip"],
-                name="users_user_is_vip_idx",
-            ),
-        ]
+        ordering = ("-created_at",)
 
     def __str__(self) -> str:
-        """Return a concise human-readable representation of the user."""
-        return f"{self.phone} ({self.username})"
+        """Return a readable representation of the user."""
+        return self.email
 
     def save(self, *args, **kwargs):
-        """
-        Normalize phone and email values before saving.
-
-        Email is normalized to lowercase so that the case-insensitive
-        unique database constraint behaves consistently for normal writes.
-        """
-        if self.phone:
-            self.phone = self.phone.strip()
-
+        """Normalize email and username before saving."""
         if self.email:
             self.email = self.email.strip().lower()
-        else:
-            self.email = ""
+
+        if self.username:
+            self.username = self.username.strip()
 
         return super().save(*args, **kwargs)
