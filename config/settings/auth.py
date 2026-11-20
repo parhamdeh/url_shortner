@@ -6,7 +6,7 @@ including the custom user model and password validation rules.
 """
 
 
-AUTH_USER_MODEL = "users.UserModel"
+AUTH_USER_MODEL = "users.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {

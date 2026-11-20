@@ -44,6 +44,7 @@ LOCAL_APPS = [
     # 'app.sms_gatewy',
     # 'app.notification',
     'app.auth',
+    'app.core',
 ]
 
 INSTALLED_APPS = THIRD_PARTY_APPS + DEFAULT_APPS + LOCAL_APPS
