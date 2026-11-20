@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import as_serializer_error
 from rest_framework.views import exception_handler
 
-# from app.core.exceptions import ApplicationError
+from app.utils.exceptions import ApplicationError
 
 _DRF_ERROR_MAP = {
     "not_authenticated": ("authentication_required", _lazy("Authentication required.")),
