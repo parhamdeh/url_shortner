@@ -40,8 +40,8 @@ DEFAULT_APPS = [
 LOCAL_APPS = [
     'app.apis',
     'app.users',
+    'app.sms_gatewy',
     # 'app.shortner',
-    # 'app.sms_gatewy',
     # 'app.notification',
     'app.auth',
     'app.core',
